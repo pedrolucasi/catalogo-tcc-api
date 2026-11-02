@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import Group, Permission, User
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import connection, transaction
 from rest_framework.authtoken.models import Token
 
 from catalogo.models import Autor, Curso, Orientador, PalavraChave, Trabalho
@@ -119,6 +119,13 @@ class Command(BaseCommand):
         PalavraChave.objects.all().delete()
         Orientador.objects.all().delete()
         Curso.objects.all().delete()
+        if connection.vendor == 'sqlite':
+            tabelas = [m._meta.db_table for m in (Trabalho, Autor, PalavraChave, Orientador, Curso)]
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"DELETE FROM sqlite_sequence WHERE name IN ({', '.join(['%s'] * len(tabelas))})",
+                    tabelas,
+                )
 
         usuarios = self.criar_coordenacao()
 
