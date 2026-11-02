@@ -139,7 +139,11 @@ class Command(BaseCommand):
             nonlocal proximo_autor
             i = proximo_autor
             proximo_autor += 1
-            nome = f'{NOMES[i % len(NOMES)]} {SOBRENOMES[(i * 7) % len(SOBRENOMES)]} {SOBRENOMES[(i * 3 + 5) % len(SOBRENOMES)]}'
+            meio = (i * 7) % len(SOBRENOMES)
+            fim = (i * 3 + 5) % len(SOBRENOMES)
+            if fim == meio:
+                fim = (fim + 1) % len(SOBRENOMES)
+            nome = f'{NOMES[i % len(NOMES)]} {SOBRENOMES[meio]} {SOBRENOMES[fim]}'
             email = f'aluno{i + 1:03d}@academico.ifpb.edu.br'
             return Autor.objects.create(nome=nome, email=email)
 
