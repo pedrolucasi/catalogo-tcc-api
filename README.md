@@ -53,7 +53,7 @@ O `db.sqlite3` já vem com os dados de teste. Para recriá-los do zero (apaga o 
 python manage.py popular_catalogo
 ```
 
-Testes automatizados (cobrem os critérios de aceitação 1 a 23):
+Testes automatizados (cobrem os critérios de aceitação 1 a 23 e a `v2` do Desafio A):
 
 ```bash
 python manage.py test catalogo
@@ -87,7 +87,7 @@ Use o token no cabeçalho `Authorization: Token <chave>`, com a palavra `Token` 
 
 ## Endpoints
 
-Documentação navegável: <http://127.0.0.1:8000/api/docs/> (Swagger UI) e <http://127.0.0.1:8000/api/redoc/>.
+Documentação navegável: <http://127.0.0.1:8000/api/docs/> (Swagger UI) e <http://127.0.0.1:8000/api/redoc/>. Elas mostram a `v1`; a `v2` da porta aberta fica em <http://127.0.0.1:8000/api/docs/?version=v2> (veja o Desafio A).
 Schema OpenAPI: <http://127.0.0.1:8000/api/schema/>.
 
 ### Porta aberta — sem autenticação, limitada a 30 requisições por minuto por IP
@@ -164,7 +164,7 @@ Os serializers da porta aberta (`TrabalhoPublicoListaSerializer` e `TrabalhoPubl
 
 ### 2. Por quanto tempo prometemos: versão no endereço
 
-- **Porta aberta: com versão no endereço**, `/api/publico/v1/`, via `URLPathVersioning` do DRF (`ALLOWED_VERSIONS = ['v1']`).
+- **Porta aberta: com versão no endereço**, `/api/publico/v1/`, via `URLPathVersioning` do DRF (`ALLOWED_VERSIONS = ['v1', 'v2']`; a `v2` é o Desafio A, mais abaixo).
 - **Porta fechada: sem versão**, `/api/gestao/`.
 
 As respostas são diferentes porque os consumidores são diferentes.
@@ -198,6 +198,36 @@ Para ver o 429 (PowerShell):
 Em bash: `for i in $(seq 31); do curl -s -o /dev/null -w "%{http_code} " http://127.0.0.1:8000/api/publico/v1/estatisticas/; done`
 
 O contador fica no cache padrão do Django (memória do processo), o que basta para um único servidor. Com vários processos, seria preciso apontar `CACHES` para um cache compartilhado.
+
+## Desafio A: a promessa quebrada, de propósito
+
+A porta aberta tem uma `v2`, em `/api/publico/v2/`, em que o campo `resumo` do detalhe passa a se chamar `resumo_pt`, como no cenário da seção 4. A `v1` continua no ar, intacta, e as duas são servidas pelos mesmos models: o banco tem um único campo `resumo`, e cada versão o publica com o nome que prometeu.
+
+| | `v1` | `v2` |
+|---|---|---|
+| Lista e estatísticas | iguais | iguais |
+| Detalhe | `resumo` | `resumo_pt` |
+| Regras (só publicados, 404, limite de uso) | iguais | iguais |
+| Documentação | <http://127.0.0.1:8000/api/docs/> | <http://127.0.0.1:8000/api/docs/?version=v2> |
+
+O front-end continua na `v1` de propósito: ele faz o papel do painel do aluno de outro campus, que não sabe que a `v2` existe e segue funcionando.
+
+### Quanto código foi duplicado
+
+**Nenhuma linha duplicada.** Foram cerca de 12 linhas novas de código:
+
+- **8 linhas:** o `TrabalhoPublicoDetalheV2Serializer`, que herda do detalhe da `v1` e só troca `resumo` por `resumo_pt`.
+- **2 linhas:** o `get_serializer_class()` do ViewSet escolhe esse serializer quando `request.version == 'v2'`.
+- **1 linha:** a rota aceita `v1|v2`.
+- **1 linha:** `ALLOWED_VERSIONS` em `settings.py`.
+
+Os testes de que a `v1` não mudou e de que a `v2` segue as mesmas regras ficam em `VersionamentoTests`.
+
+Saiu barato porque a mudança é só um nome na borda, e o resto da cadeia (queryset, filtros, busca, paginação, limite) é o mesmo. Mesmo assim, já cobrou três preços:
+
+1. **A documentação perdeu detalhe.** Para o drf-spectacular gerar um formato de resposta por versão, o detalhe deixou de declarar as respostas 404 e 429 de forma estruturada (declarar qualquer código impede que ele leia o 200 do serializer). Elas passaram a ser descritas em texto.
+2. **Cada versão nova multiplica o que precisa ser testado.** Toda regra da porta aberta agora vale em dois endereços.
+3. **A herança só funciona enquanto a v1 só cresce.** Ela funciona porque a `v1` só muda de forma aditiva: um campo novo no detalhe da `v1` aparece também na `v2`, o que é aceitável. Se a mudança fosse mais funda (por exemplo, a `v2` com outro formato de data em todos os campos, outros nomes de filtro ou o resumo em inglês saindo de um campo novo no model), a herança deixaria de servir. Viriam serializers, filtros e talvez views paralelas, e esse número cresceria rápido. É por isso que versionar dói: o custo não está na `v2`, está em manter a `v1` viva enquanto ela existir.
 
 ## ViewSet com router e APIView: qual ficou em cada um, e por quê
 

@@ -237,3 +237,47 @@ class LimitesEDocumentacaoTests(BaseCatalogo):
         operacao = schema['paths']['/api/publico/v1/trabalhos/']['get']
         self.assertTrue(operacao['description'])
         self.assertIn('/api/gestao/trabalhos/', schema['paths'])
+
+
+class VersionamentoTests(BaseCatalogo):
+    """Desafio A: a v2 renomeia `resumo` para `resumo_pt` e a v1 continua intacta."""
+
+    def detalhe(self, versao):
+        pk = Trabalho.objects.publicados().first().pk
+        resposta = self.client.get(f'/api/publico/{versao}/trabalhos/{pk}/')
+        self.assertEqual(resposta.status_code, 200)
+        return resposta.data
+
+    def test_v1_continua_com_resumo(self):
+        dados = self.detalhe('v1')
+        self.assertIn('resumo', dados)
+        self.assertNotIn('resumo_pt', dados)
+
+    def test_v2_troca_resumo_por_resumo_pt_e_mantem_o_resto(self):
+        v1, v2 = self.detalhe('v1'), self.detalhe('v2')
+        self.assertNotIn('resumo', v2)
+        self.assertEqual(v2['resumo_pt'], v1['resumo'])
+        self.assertEqual(set(v2) - {'resumo_pt'}, set(v1) - {'resumo'})
+
+    def test_v2_tem_as_mesmas_regras_da_porta_aberta(self):
+        nao_publicado = Trabalho.objects.exclude(situacao=Trabalho.Situacao.PUBLICADO).first()
+        self.assertEqual(self.client.get(f'/api/publico/v2/trabalhos/{nao_publicado.pk}/').status_code, 404)
+        self.assertEqual(self.client.get('/api/publico/v2/trabalhos/').status_code, 200)
+        self.assertEqual(self.client.get('/api/publico/v2/estatisticas/').status_code, 200)
+
+    def test_versao_inexistente_e_404(self):
+        self.assertEqual(self.client.get('/api/publico/v3/trabalhos/').status_code, 404)
+
+    def test_schema_de_cada_versao(self):
+        def campos_do_detalhe(versao):
+            resposta = self.client.get(
+                f'/api/schema/?version={versao}', HTTP_ACCEPT='application/vnd.oai.openapi+json'
+            )
+            schema = json.loads(resposta.content)
+            operacao = schema['paths'][f'/api/publico/{versao}/trabalhos/{{id}}/']['get']
+            ref = operacao['responses']['200']['content']['application/json']['schema']['$ref']
+            return set(schema['components']['schemas'][ref.rsplit('/', 1)[1]]['properties'])
+
+        self.assertIn('resumo', campos_do_detalhe('v1'))
+        self.assertIn('resumo_pt', campos_do_detalhe('v2'))
+        self.assertNotIn('resumo', campos_do_detalhe('v2'))

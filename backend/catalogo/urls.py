@@ -26,7 +26,7 @@ ObterToken = extend_schema_view(
 
 urlpatterns = [
     re_path(
-        r'^publico/(?P<version>v1)/',
+        r'^publico/(?P<version>v1|v2)/',
         include(
             [
                 *publico.urls,

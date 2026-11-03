@@ -68,6 +68,22 @@ class TrabalhoPublicoDetalheSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+# A v2 só muda um campo do detalhe (`resumo` passa a ser `resumo_pt`), então
+# herda tudo da v1 e troca esse campo. O model continua com um único `resumo`;
+# a v1 segue publicando-o com o nome antigo, intacta.
+class TrabalhoPublicoDetalheV2Serializer(TrabalhoPublicoDetalheSerializer):
+    """Ficha de um trabalho publicado. O resumo em português vem em `resumo_pt`."""
+
+    resumo_pt = serializers.CharField(source='resumo', read_only=True)
+
+    class Meta(TrabalhoPublicoDetalheSerializer.Meta):
+        fields = [
+            'resumo_pt' if campo == 'resumo' else campo
+            for campo in TrabalhoPublicoDetalheSerializer.Meta.fields
+        ]
+        read_only_fields = fields
+
+
 # ---------------------------------------------------------------------------
 # Porta fechada
 # ---------------------------------------------------------------------------

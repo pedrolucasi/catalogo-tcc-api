@@ -151,7 +151,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/minute',
     },
-    'ALLOWED_VERSIONS': ['v1'],
+    'ALLOWED_VERSIONS': ['v1', 'v2'],
     'DEFAULT_VERSION': 'v1',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'catalogo.excecoes.tratador_de_excecoes',
@@ -163,7 +163,10 @@ SPECTACULAR_SETTINGS = {
         'API do catálogo de trabalhos de conclusão de curso.\n\n'
         '**Porta aberta** (`/api/publico/v1/`): leitura sem autenticação, só trabalhos '
         'publicados, limitada a 30 requisições por minuto por IP. Ao passar do limite, '
-        'a resposta é `429 Too Many Requests` com o cabeçalho `Retry-After`.\n\n'
+        'a resposta é `429 Too Many Requests` com o cabeçalho `Retry-After`. '
+        'Existe também a `/api/publico/v2/`, em que o detalhe traz `resumo_pt` no lugar de '
+        '`resumo`; a `v1` continua no ar sem mudanças. Para ver a documentação da `v2`, '
+        'acrescente `?version=v2` ao endereço desta página.\n\n'
         '**Porta fechada** (`/api/gestao/`): escrita para a coordenação, autenticada por '
         'token no cabeçalho `Authorization: Token <chave>`. Obtenha o token em '
         '`POST /api/gestao/token/`.'

@@ -9,7 +9,11 @@ from rest_framework.views import APIView
 
 from .filtros import TrabalhoPublicoFilter
 from .models import Curso, Orientador, Trabalho
-from .serializers import TrabalhoPublicoDetalheSerializer, TrabalhoPublicoListaSerializer
+from .serializers import (
+    TrabalhoPublicoDetalheSerializer,
+    TrabalhoPublicoDetalheV2Serializer,
+    TrabalhoPublicoListaSerializer,
+)
 
 TOP_ORIENTADORES = 5
 
@@ -52,14 +56,17 @@ class PortaAbertaMixin:
     retrieve=extend_schema(
         summary='Detalhar um trabalho publicado',
         description=(
-            'Ficha completa de um TCC publicado, com resumo e palavras-chave. '
-            'Um trabalho que não está publicado responde 404, mesmo que o identificador exista.'
+            'Ficha completa de um TCC publicado, com resumo e palavras-chave.\n\n'
+            'Na **v1** o resumo vem em `resumo`; na **v2**, em `resumo_pt`. É a única '
+            'diferença entre as duas versões.\n\n'
+            '**404**: o trabalho não existe ou não está publicado, mesmo que o identificador '
+            'exista.\n\n'
+            '**429**: limite de 30 requisições por minuto por IP excedido; o cabeçalho '
+            '`Retry-After` diz quantos segundos esperar.'
         ),
-        responses={
-            200: TrabalhoPublicoDetalheSerializer,
-            404: OpenApiResponse(description='Trabalho inexistente ou não publicado.'),
-            429: RESPOSTA_429,
-        },
+        # Sem `responses` aqui de propósito: informar qualquer código impede o
+        # drf-spectacular de tirar o 200 de get_serializer_class(), que é quem
+        # sabe que o formato muda conforme a versão.
         tags=['Porta aberta'],
     ),
 )
@@ -76,6 +83,8 @@ class TrabalhoPublicoViewSet(PortaAbertaMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
+            if self.request.version == 'v2':
+                return TrabalhoPublicoDetalheV2Serializer
             return TrabalhoPublicoDetalheSerializer
         return TrabalhoPublicoListaSerializer
 
