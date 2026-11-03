@@ -113,3 +113,49 @@ a { color: var(--verde-escuro); }
 .ficha dt { font-weight: 600; color: var(--suave); }
 .ficha dd { margin: 0; }
 .resumo { white-space: pre-line; }
+
+/* ---------------------------------------------- área da coordenação (Desafio B) */
+
+.topo__linha { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem 1rem; }
+.topo__nav { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; }
+.topo__usuario { opacity: .9; }
+.topo__link {
+  font: inherit;
+  color: #fff;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.formulario {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+.formulario h1 { margin: 0 0 .25rem; font-size: 1.5rem; }
+.formulario--estreito { max-width: 420px; margin: 0 auto; }
+.formulario__grade { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.formulario__campo { display: flex; flex-direction: column; gap: .25rem; margin-top: 1rem; }
+.formulario__grade .formulario__campo { margin-top: 0; }
+.formulario__campo--largo { grid-column: 1 / -1; }
+.formulario textarea { resize: vertical; }
+@media (max-width: 720px) {
+  .formulario__grade { grid-template-columns: 1fr; }
+}
+
+.dica { font-size: .8rem; color: var(--suave); }
+.erro-campo { font-size: .85rem; color: var(--vermelho); }
+.erro-campo:empty { display: none; }
+
+.aviso { border-radius: 6px; padding: .6rem .8rem; margin: 1rem 0 0; }
+.aviso--erro { background: #fdecea; border: 1px solid var(--vermelho); color: var(--vermelho); }
+.aviso[hidden] { display: none; }
+
+.estado--ok { border-color: var(--verde); }
+.estado--ok h2 { color: var(--verde-escuro); }
+.acoes { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem; }
+.botao--secundario { background: #fff; color: var(--verde-escuro); }

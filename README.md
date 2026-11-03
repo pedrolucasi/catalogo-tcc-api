@@ -229,6 +229,41 @@ Saiu barato porque a mudança é só um nome na borda, e o resto da cadeia (quer
 2. **Cada versão nova multiplica o que precisa ser testado.** Toda regra da porta aberta agora vale em dois endereços.
 3. **A herança só funciona enquanto a v1 só cresce.** Ela funciona porque a `v1` só muda de forma aditiva: um campo novo no detalhe da `v1` aparece também na `v2`, o que é aceitável. Se a mudança fosse mais funda (por exemplo, a `v2` com outro formato de data em todos os campos, outros nomes de filtro ou o resumo em inglês saindo de um campo novo no model), a herança deixaria de servir. Viriam serializers, filtros e talvez views paralelas, e esse número cresceria rápido. É por isso que versionar dói: o custo não está na `v2`, está em manter a `v1` viva enquanto ela existir.
 
+## Desafio B: um cliente para a porta fechada
+
+O front-end tem uma **área da coordenação** (link no topo da página):
+
+- **`#/entrar`:** login com usuário e senha (`POST /api/gestao/token/`).
+  - Depois do login, o front-end faz uma consulta barata a `/api/gestao/cursos/` para confirmar que a conta é da coordenação. O token é devolvido para qualquer conta, mas só a coordenação usa a porta fechada.
+  - Senha errada, conta fora da coordenação e API fora do ar têm mensagens próprias.
+- **`#/cadastrar`:** formulário de cadastro de trabalho (`POST /api/gestao/trabalhos/`).
+  - Curso, orientador, autores e palavras-chave vêm da própria API.
+  - O formulário **não valida nada no navegador**: quem decide é a API, e cada mensagem de erro do RF12 aparece embaixo do campo correspondente.
+  - `cadastrado_por` não é enviado. Quem cadastrou vem do token, e a tela de sucesso mostra o nome devolvido pela API.
+  - Se o trabalho foi cadastrado como publicado, a tela de sucesso traz um link para ele na porta aberta.
+- **Sair:** apaga o token do navegador e volta à lista.
+- **Token recusado:** se a API recusar o token (401) ou a conta (403), a sessão é encerrada e a tela volta ao login com um aviso.
+
+### Onde o token fica guardado, e por quê
+
+**Escolha: `sessionStorage`**, com uma Content-Security-Policy que limita o estrago de um XSS.
+
+| Opção | Ladrão via XSS lê o token? | Sobrevive a recarregar a página? | Fica depois de fechar a aba? |
+|---|---|---|---|
+| Variável em memória | só durante o ataque | não | não |
+| **`sessionStorage`** | **sim** | **sim** | **não** |
+| `localStorage` | sim | sim | sim, indefinidamente |
+| Cookie `HttpOnly` | não | sim | depende |
+
+- **Por que não o cookie `HttpOnly`:** é a única opção que um script injetado não consegue ler. Mas o RF9 exige que a porta fechada se identifique **por token no cabeçalho, não por sessão**. Usar o cookie obrigaria o Django a ler o token de um cookie (uma autenticação nova, com proteção contra CSRF, porque cookie vai junto em toda requisição) e deixaria o front-end dependente do navegador, que é justamente o que o RF9 proíbe. Seria trocar um risco por outro e ainda descumprir um requisito.
+- **Por que não o `localStorage`:** o token do DRF não expira. No `localStorage` ele ficaria no computador para sempre, inclusive num laboratório compartilhado, onde o próximo aluno abriria o navegador já logado como coordenação.
+- **Por que não só em memória:** a navegação é por endereço (`#/cadastrar`), e um recarregamento derrubaria o login a cada F5. Nesse uso, não há ganho de segurança que compense: um script injetado lê a variável do mesmo jeito enquanto a página está aberta.
+- **Por que o `sessionStorage`:** o token some ao fechar a aba, não passa para outras abas e sobrevive ao recarregamento. O risco que sobra é o XSS. Contra ele:
+  - **Nada no front-end monta HTML a partir de texto.** Toda a interface é criada com `createElement` e `textContent`, e `innerHTML` não é usado em lugar nenhum, então um título de TCC com `<script>` aparece como texto.
+  - **O `index.html` declara uma CSP** (`script-src 'self'`, `connect-src` só para a API, `object-src 'none'`). Mesmo que um script fosse injetado, o navegador não o executaria se não viesse do próprio endereço, e não deixaria a página mandar dados para outro servidor. Se o endereço da API mudar em `config.js`, o `connect-src` da CSP precisa mudar junto.
+
+**Limitação que fica:** "Sair" só apaga o token do navegador. O DRF não tem um endpoint de logout, e o token continua válido no servidor até ser apagado no admin. Um logout de verdade exigiria um endpoint na porta fechada que apagasse o token, ou tokens com validade, o que o `TokenAuthentication` padrão não tem.
+
 ## ViewSet com router e APIView: qual ficou em cada um, e por quê
 
 - **ViewSet + router:**
@@ -272,6 +307,7 @@ Gerados pelo comando `popular_catalogo` e já gravados no `db.sqlite3`:
 - A busca é enviada ao servidor (`search`) 400 ms depois que o usuário para de digitar, para não gastar o limite de uso a cada tecla.
 - Filtros por ano, curso e palavra-chave (clicando numa palavra-chave), mais ordenação. Tudo é filtrado no servidor, e as opções de ano e curso vêm de `/estatisticas/`.
 - O detalhe mostra resumo, autores, orientador, coorientador, ano, data de defesa e palavras-chave.
-- Estados vazio e de erro: busca sem resultado mostra uma mensagem e um botão para limpar os filtros; API fora do ar (ou sem resposta em 10 s), 404 e 429 têm mensagens próprias e botão para tentar de novo.
-- O front-end não guarda cópia de dados. Com o Django desligado, a tela mostra apenas o erro.
+- Estados vazio e de erro: busca sem resultado mostra uma mensagem e um botão para limpar os filtros; API fora do ar (ou sem resposta em 10 s), 404 e 429 têm mensagens próprias e botão para tentar de novo. No 429, a mensagem diz quantos segundos esperar (lidos do `Retry-After`, que o Django libera ao front-end com `CORS_EXPOSE_HEADERS`).
+- O front-end não guarda cópia de dados. Com o Django desligado, a tela mostra apenas o erro. A única coisa guardada no navegador é o token da coordenação, na área de cadastro (veja o Desafio B).
 - O estado da busca fica no endereço (`#/?search=...&curso=TSI`), então recarregar a página ou compartilhar o link mantém a busca.
+- A área da coordenação (`#/entrar` e `#/cadastrar`) faz login e cadastra trabalhos pela porta fechada (veja o Desafio B).

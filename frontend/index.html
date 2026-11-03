@@ -3,15 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Só roda script deste endereço e só conversa com a API. Diminui o estrago
+       de um XSS, que é o risco de guardar o token no sessionStorage (ver README).
+       Se mudar o endereço da API em config.js, mude também o connect-src. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src http://127.0.0.1:8000 http://localhost:8000; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>Catálogo de TCCs — IFPB</title>
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <header class="topo">
-    <a href="#/" class="marca">
-      <span class="marca__sigla">IFPB</span>
-      <span>Catálogo de TCCs</span>
-    </a>
+    <div class="topo__linha">
+      <a href="#/" class="marca">
+        <span class="marca__sigla">IFPB</span>
+        <span>Catálogo de TCCs</span>
+      </a>
+      <nav id="nav-coordenacao" class="topo__nav" aria-label="Coordenação"></nav>
+    </div>
     <p class="topo__sub">Trabalhos de conclusão de curso publicados, abertos para consulta.</p>
   </header>
 
