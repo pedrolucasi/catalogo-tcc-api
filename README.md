@@ -11,8 +11,8 @@ O Django não devolve nenhuma página própria: só JSON, mais as páginas que o
 
 ## Integrantes
 
-- _Nome completo do integrante 1_
-- _Nome completo do integrante 2_
+- Pedro Lucas Silva Batista
+- Suetone Carneiro de Andrade Neto
 
 ## Estrutura
 
