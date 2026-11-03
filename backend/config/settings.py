@@ -180,3 +180,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5500',
     'http://127.0.0.1:5500',
 ]
+
+# Fora da lista de cabeçalhos "seguros" do CORS, o navegador esconde o
+# Retry-After do JavaScript de outra origem. Sem isto, o front-end recebe o 429
+# mas não consegue dizer ao usuário quantos segundos esperar.
+CORS_EXPOSE_HEADERS = ['Retry-After']

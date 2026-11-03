@@ -219,6 +219,16 @@ class LimitesEDocumentacaoTests(BaseCatalogo):
         self.assertEqual(resposta.status_code, 429)
         self.assertIn('Retry-After', resposta.headers)
 
+    def test_21_front_end_consegue_ler_o_retry_after(self):
+        # O front-end roda em outra origem: sem expor o cabeçalho pelo CORS, o
+        # navegador o esconde e a tela não sabe quantos segundos pedir de espera.
+        origem = {'HTTP_ORIGIN': 'http://localhost:5500'}
+        for _ in range(30):
+            self.client.get(ESTATISTICAS, **origem)
+        resposta = self.client.get(ESTATISTICAS, **origem)
+        self.assertEqual(resposta.status_code, 429)
+        self.assertIn('retry-after', resposta.headers['Access-Control-Expose-Headers'].lower())
+
     def test_22_23_documentacao_e_schema(self):
         self.assertEqual(self.client.get('/api/docs/').status_code, 200)
         resposta = self.client.get('/api/schema/', HTTP_ACCEPT='application/vnd.oai.openapi+json')
