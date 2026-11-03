@@ -98,6 +98,8 @@ Schema OpenAPI: <http://127.0.0.1:8000/api/schema/>.
 | GET | `/api/publico/v1/trabalhos/{id}/` | Detalhe de um trabalho publicado; 404 se não estiver publicado |
 | GET | `/api/publico/v1/estatisticas/` | Totais por ano, por curso e os 5 orientadores com mais trabalhos publicados |
 
+Os mesmos três endereços existem em `/api/publico/v2/`, com uma única diferença: no detalhe, `resumo` se chama `resumo_pt` (veja o Desafio A).
+
 Parâmetros da lista, todos combináveis:
 
 | Parâmetro | Exemplo | Efeito |
